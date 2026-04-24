@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     request_id_header: str = "X-Request-ID"
     http_timeout_seconds: float = 10.0
+    aggregator_service_url: str = "http://pronunt-aggregator-service:8000"
 
     auth_enabled: bool = False
     allow_unsafe_dev_auth: bool = True
@@ -29,6 +30,8 @@ class Settings(BaseSettings):
 
         if self.http_timeout_seconds <= 0:
             errors.append("HTTP_TIMEOUT_SECONDS must be greater than 0.")
+        if not self.aggregator_service_url:
+            errors.append("AGGREGATOR_SERVICE_URL is required.")
 
         if self.auth_enabled:
             if not self.keycloak_issuer:
