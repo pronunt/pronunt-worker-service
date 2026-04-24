@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: pronunt-worker-service-config
-  namespace: prism
+  namespace: pronunt-app-ns
 data:
   APP_NAME: pronunt-worker-service
   APP_ENV: production
@@ -11,4 +11,5 @@ data:
   LOG_LEVEL: INFO
   RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
   AGGREGATOR_SERVICE_URL: http://pronunt-aggregator-service:8000
+
 
