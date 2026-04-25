@@ -7,7 +7,7 @@ from app.core.auth import AuthContext
 from app.core.settings import Settings
 from app.schemas.pull_request import WorkerPullRequestPayload
 from app.services import worker as worker_service_module
-from app.services.worker import WorkerService
+from app.services.worker import WorkerConsumer, WorkerService
 
 
 def _build_payload() -> WorkerPullRequestPayload:
@@ -55,3 +55,63 @@ def test_forward_pull_request_returns_forward_result() -> None:
         assert result.pr_uid.endswith("#7")
     finally:
         worker_service_module.service_request = original_service_request
+
+
+def test_forward_pull_request_from_queue_returns_forward_result() -> None:
+    original_service_request = worker_service_module.service_request
+    worker_service_module.service_request = _fake_service_request
+    try:
+        service = WorkerService(Settings(_env_file=None, allow_unsafe_dev_auth=True))
+
+        result = asyncio.run(service.forward_pull_request_from_queue(_build_payload(), request_id="queue-request-id"))
+
+        assert result.status == "forwarded"
+        assert result.forwarded_to == "http://pronunt-aggregator-service:8000"
+        assert result.pr_uid.endswith("#7")
+    finally:
+        worker_service_module.service_request = original_service_request
+
+
+class _FakeMessageProcess:
+    async def __aenter__(self):
+        return None
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return None
+
+
+class _FakeMessage:
+    def __init__(self, body: bytes, headers: dict[str, str]) -> None:
+        self.body = body
+        self.headers = headers
+
+    def process(self, requeue: bool = False) -> _FakeMessageProcess:
+        return _FakeMessageProcess()
+
+
+def test_worker_consumer_handles_message() -> None:
+    payload = _build_payload()
+    captured: dict[str, str | WorkerPullRequestPayload] = {}
+
+    async def fake_forward(self, payload: WorkerPullRequestPayload, request_id: str | None = None):
+        captured["payload"] = payload
+        captured["request_id"] = request_id or ""
+        return None
+
+    original_forward = WorkerService.forward_pull_request_from_queue
+    WorkerService.forward_pull_request_from_queue = fake_forward
+    try:
+        settings = Settings(_env_file=None, allow_unsafe_dev_auth=True)
+        consumer = WorkerConsumer(settings, WorkerService(settings))
+        message = _FakeMessage(
+            body=payload.model_dump_json().encode("utf-8"),
+            headers={settings.request_id_header: "queue-request-id"},
+        )
+
+        asyncio.run(consumer.handle_message(message))
+
+        assert captured["request_id"] == "queue-request-id"
+        assert isinstance(captured["payload"], WorkerPullRequestPayload)
+        assert captured["payload"].number == payload.number
+    finally:
+        WorkerService.forward_pull_request_from_queue = original_forward

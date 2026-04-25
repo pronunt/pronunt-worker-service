@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     request_id_header: str = "X-Request-ID"
     http_timeout_seconds: float = 10.0
     aggregator_service_url: str = "http://pronunt-aggregator-service:8000"
+    rabbitmq_url: str = "amqp://guest:guest@rabbitmq:5672/"
+    rabbitmq_exchange: str = "pronunt.events"
+    rabbitmq_pr_routing_key: str = "pull_request.normalized"
+    rabbitmq_pr_queue: str = "pronunt.pull_requests.normalized"
+    worker_consumer_enabled: bool = False
 
     auth_enabled: bool = False
     allow_unsafe_dev_auth: bool = True
@@ -32,6 +37,14 @@ class Settings(BaseSettings):
             errors.append("HTTP_TIMEOUT_SECONDS must be greater than 0.")
         if not self.aggregator_service_url:
             errors.append("AGGREGATOR_SERVICE_URL is required.")
+        if not self.rabbitmq_url:
+            errors.append("RABBITMQ_URL is required.")
+        if not self.rabbitmq_exchange:
+            errors.append("RABBITMQ_EXCHANGE is required.")
+        if not self.rabbitmq_pr_routing_key:
+            errors.append("RABBITMQ_PR_ROUTING_KEY is required.")
+        if not self.rabbitmq_pr_queue:
+            errors.append("RABBITMQ_PR_QUEUE is required.")
 
         if self.auth_enabled:
             if not self.keycloak_issuer:

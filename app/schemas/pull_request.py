@@ -36,6 +36,11 @@ class WorkerForwardResult(BaseModel):
     aggregator_id: str
 
 
-class WorkerHealthDependencyResponse(BaseModel):
+class WorkerDependencyResponse(BaseModel):
     status: str
     aggregator_url: str
+    rabbitmq_url: str
+    exchange: str
+    routing_key: str
+    queue: str
+    consumer_enabled: bool

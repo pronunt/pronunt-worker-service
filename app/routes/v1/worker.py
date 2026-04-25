@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, Request, status
 
 from app.core.auth import AuthContext, require_roles
 from app.core.settings import Settings, get_settings
-from app.schemas.pull_request import WorkerForwardResult, WorkerHealthDependencyResponse, WorkerPullRequestPayload
+from app.schemas.pull_request import (
+    WorkerDependencyResponse,
+    WorkerForwardResult,
+    WorkerPullRequestPayload,
+)
 from app.services.worker import WorkerService
 
 router = APIRouter(tags=["worker"])
@@ -35,8 +39,13 @@ async def forward_pull_request(
 def aggregator_dependency(
     settings: Annotated[Settings, Depends(get_settings)],
     _: WorkerAccessDependency,
-) -> WorkerHealthDependencyResponse:
-    return WorkerHealthDependencyResponse(
+) -> WorkerDependencyResponse:
+    return WorkerDependencyResponse(
         status="configured",
         aggregator_url=settings.aggregator_service_url,
+        rabbitmq_url=settings.rabbitmq_url,
+        exchange=settings.rabbitmq_exchange,
+        routing_key=settings.rabbitmq_pr_routing_key,
+        queue=settings.rabbitmq_pr_queue,
+        consumer_enabled=settings.worker_consumer_enabled,
     )
