@@ -40,10 +40,13 @@ class WorkerService:
         self,
         payload: WorkerPullRequestPayload,
         request_id: str | None = None,
+        authorization: str | None = None,
     ) -> WorkerForwardResult:
         headers = {}
         if request_id:
             headers[self.settings.request_id_header] = request_id
+        if authorization:
+            headers["Authorization"] = authorization
 
         response = await service_request(
             "POST",
@@ -97,9 +100,13 @@ class WorkerConsumer:
         async with message.process(requeue=False):
             payload = WorkerPullRequestPayload.model_validate(json.loads(message.body.decode("utf-8")))
             request_id = message.headers.get(self.settings.request_id_header) if message.headers else None
+            authorization = message.headers.get("Authorization") if message.headers else None
             if isinstance(request_id, bytes):
                 request_id = request_id.decode("utf-8")
+            if isinstance(authorization, bytes):
+                authorization = authorization.decode("utf-8")
             await self.worker_service.forward_pull_request_from_queue(
                 payload,
                 request_id=request_id or str(uuid4()),
+                authorization=authorization,
             )
